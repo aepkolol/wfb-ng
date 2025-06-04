@@ -2,6 +2,7 @@
 Description=WFB-ng standalone server, profile %i
 Requires=wifibroadcast.service
 ReloadPropagatedFrom=wifibroadcast.service
+PartOf=webdata@%i.service
 
 [Service]
 Type=simple

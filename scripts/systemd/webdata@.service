@@ -1,0 +1,15 @@
+[Unit]
+Description=Webdata Service for %i
+After=network.target wifibroadcast@%i.service
+Requires=wifibroadcast@%i.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/wifibroadcast
+EnvironmentFile=-/etc/default/wifibroadcast.%i
+ExecStart=/usr/bin/webdata.py %i
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=wifibroadcast@%i.service
