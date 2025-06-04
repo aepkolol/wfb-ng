@@ -1,0 +1,44 @@
+<%+header%>
+<h2><%:WFB-ng Statistics%></h2>
+<canvas id="rssiChart" width="600" height="200" style="border:1px solid #ccc;"></canvas>
+<script type="text/javascript">
+    var rssiData = [];
+    function drawGraph() {
+        var c = document.getElementById('rssiChart');
+        var ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, c.width, c.height);
+        if (rssiData.length < 2)
+            return;
+        ctx.beginPath();
+        for (var i = 0; i < rssiData.length; i++) {
+            var x = i * c.width / (rssiData.length - 1);
+            var y = c.height - (rssiData[i] + 100) * c.height / 100;
+            if (i === 0)
+                ctx.moveTo(x, y);
+            else
+                ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = '#00f';
+        ctx.stroke();
+    }
+
+    function update_stats() {
+        var url = '<%=url('admin/services/wfb-ng/stats')%>';
+        XHR.get(url, null, function(x, data) {
+            try {
+                var obj = JSON.parse(data);
+                if (obj.rx_ant_stats && obj.rx_ant_stats[0]) {
+                    rssiData.push(parseInt(obj.rx_ant_stats[0].rssi_avg, 10));
+                    if (rssiData.length > 50)
+                        rssiData.shift();
+                    drawGraph();
+                }
+            } catch (e) {
+                /* ignore parsing errors */
+            }
+        });
+    }
+    update_stats();
+    window.setInterval(update_stats, 2000);
+</script>
+<%+footer%>
