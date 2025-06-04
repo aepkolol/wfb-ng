@@ -4,7 +4,7 @@
 <div style="display:flex;flex-wrap:wrap;gap:10px;">
   <canvas id="rssiChart" style="border:1px solid #ccc;width:100%;max-width:600px;height:200px;"></canvas>
   <table id="peerTable" class="table" style="flex:1 1 300px;min-width:200px;">
-    <thead><tr><th>ID</th><th>RSSI[dBm]</th><th>Packets</th></tr></thead>
+    <thead><tr><th>ID</th><th>RSSI[dBm]</th><th>Packets</th><th>Lost</th><th>Rate[kbit/s]</th></tr></thead>
     <tbody></tbody>
   </table>
 </div>
@@ -48,7 +48,11 @@
         Object.keys(peers).forEach(function(id){
             var st = peers[id];
             var tr = document.createElement('tr');
-            tr.innerHTML = '<td style="color:'+getColor(id)+'">'+id+'</td><td>'+st.rssi+'</td><td>'+st.packets+'</td>';
+            tr.innerHTML = '<td style="color:'+getColor(id)+'">'+id+'</td>'+
+                           '<td>'+st.rssi+'</td>'+
+                           '<td>'+st.packets+'</td>'+
+                           '<td>'+st.lost+'</td>'+
+                           '<td>'+st.rate+'</td>';
             tbody.appendChild(tr);
         });
     }
@@ -61,7 +65,16 @@
                 Object.keys(obj).forEach(function(port){
                     var o = obj[port];
                     if(o.id && o.rx_ant_stats && o.rx_ant_stats[0]){
-                        peers[o.id] = {rssi: parseInt(o.rx_ant_stats[0].rssi_avg,10), packets: o.packets && o.packets.all && o.packets.all[0] || 0};
+                        var pkt = o.packets || {};
+                        var rate = 0;
+                        if(pkt.all_bytes && pkt.all_bytes[0])
+                            rate = (pkt.all_bytes[0] * 8 / 1000).toFixed(1);
+                        peers[o.id] = {
+                            rssi: parseInt(o.rx_ant_stats[0].rssi_avg,10),
+                            packets: pkt.all && pkt.all[0] || 0,
+                            lost: pkt.lost && pkt.lost[0] || 0,
+                            rate: rate
+                        };
                         if(!rssiData[o.id]) rssiData[o.id] = [];
                         rssiData[o.id].push(peers[o.id].rssi);
                         if(rssiData[o.id].length > 50)

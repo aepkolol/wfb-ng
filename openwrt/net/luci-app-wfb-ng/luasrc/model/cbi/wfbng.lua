@@ -57,9 +57,27 @@ wifi_channel:value("153", "153 (5GHz)")
 wifi_channel:value("157", "157 (5GHz)")
 wifi_channel:value("161", "161 (5GHz)")
 wifi_channel:value("165", "165 (5GHz)")
+wifi_channel.description = "Select 5 GHz channel"
+wifi_channel.rmempty = false
+
+local valid_channels = {['36']=true,['40']=true,['44']=true,['48']=true,['149']=true,['153']=true,['157']=true,['161']=true,['165']=true}
+function wifi_channel.validate(self, value, section)
+    if valid_channels[value] then
+        return value
+    end
+    return nil, "Invalid channel"
+end
 
 local wifi_region = m:field(ListValue, "wifi_region", "WiFi Region")
 wifi_region.default = m.cfg.common and m.cfg.common.wifi_region or ""
+wifi_region.description = "ISO-3166 country code"
+wifi_region.rmempty = false
+function wifi_region.validate(self, value, section)
+    if value:match("^[A-Z][A-Z]$") then
+        return value
+    end
+    return nil, "Invalid region"
+end
 
 local function load_wifi_regions()
     local regions = {}
