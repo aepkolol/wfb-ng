@@ -1,25 +1,56 @@
 <%+header%>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <h2><%:WFB-ng Statistics%></h2>
-<canvas id="rssiChart" width="600" height="200" style="border:1px solid #ccc;"></canvas>
+<div style="display:flex;flex-wrap:wrap;gap:10px;">
+  <canvas id="rssiChart" style="border:1px solid #ccc;width:100%;max-width:600px;height:200px;"></canvas>
+  <table id="peerTable" class="table" style="flex:1 1 300px;min-width:200px;">
+    <thead><tr><th>ID</th><th>RSSI[dBm]</th><th>Packets</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
 <script type="text/javascript">
-    var rssiData = [];
+    var rssiData = {};
+    var peers = {};
+    var peerColors = {};
+    var colorList = ['#00f','#f00','#0a0','#f0f','#0ff','#fa0','#880','#f44','#4f4','#44f','#ff0','#0ff','#84f','#f84','#8ff','#ff8'];
+
+    function getColor(id){
+        if(!peerColors[id]){
+            peerColors[id] = colorList[Object.keys(peerColors).length % colorList.length];
+        }
+        return peerColors[id];
+    }
+
     function drawGraph() {
         var c = document.getElementById('rssiChart');
         var ctx = c.getContext('2d');
         ctx.clearRect(0, 0, c.width, c.height);
-        if (rssiData.length < 2)
-            return;
-        ctx.beginPath();
-        for (var i = 0; i < rssiData.length; i++) {
-            var x = i * c.width / (rssiData.length - 1);
-            var y = c.height - (rssiData[i] + 100) * c.height / 100;
-            if (i === 0)
-                ctx.moveTo(x, y);
-            else
-                ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = '#00f';
-        ctx.stroke();
+        var idx = 0;
+        Object.keys(rssiData).forEach(function(id){
+            var arr = rssiData[id];
+            if(arr.length < 2)
+                return;
+            ctx.beginPath();
+            for(var i=0;i<arr.length;i++){
+                var x = i * c.width / (arr.length - 1);
+                var y = c.height - (arr[i] + 100) * c.height / 100;
+                if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            }
+            ctx.strokeStyle = getColor(id);
+            ctx.stroke();
+            idx++;
+        });
+    }
+
+    function renderPeers() {
+        var tbody = document.getElementById('peerTable').getElementsByTagName('tbody')[0];
+        tbody.innerHTML = '';
+        Object.keys(peers).forEach(function(id){
+            var st = peers[id];
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td style="color:'+getColor(id)+'">'+id+'</td><td>'+st.rssi+'</td><td>'+st.packets+'</td>';
+            tbody.appendChild(tr);
+        });
     }
 
     function update_stats() {
@@ -27,12 +58,18 @@
         XHR.get(url, null, function(x, data) {
             try {
                 var obj = JSON.parse(data);
-                if (obj.rx_ant_stats && obj.rx_ant_stats[0]) {
-                    rssiData.push(parseInt(obj.rx_ant_stats[0].rssi_avg, 10));
-                    if (rssiData.length > 50)
-                        rssiData.shift();
-                    drawGraph();
-                }
+                Object.keys(obj).forEach(function(port){
+                    var o = obj[port];
+                    if(o.id && o.rx_ant_stats && o.rx_ant_stats[0]){
+                        peers[o.id] = {rssi: parseInt(o.rx_ant_stats[0].rssi_avg,10), packets: o.packets && o.packets.all && o.packets.all[0] || 0};
+                        if(!rssiData[o.id]) rssiData[o.id] = [];
+                        rssiData[o.id].push(peers[o.id].rssi);
+                        if(rssiData[o.id].length > 50)
+                            rssiData[o.id].shift();
+                    }
+                });
+                drawGraph();
+                renderPeers();
             } catch (e) {
                 /* ignore parsing errors */
             }
