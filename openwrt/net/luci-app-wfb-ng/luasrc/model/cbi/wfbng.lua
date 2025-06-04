@@ -46,11 +46,43 @@ m = SimpleForm("wfbng", "WFB-ng Configuration")
 m.reset = false
 m.cfg = read_config(cfgfile)
 
-local wifi_channel = m:field(Value, "wifi_channel", "WiFi Channel")
+local wifi_channel = m:field(ListValue, "wifi_channel", "WiFi Channel")
 wifi_channel.default = m.cfg.common and m.cfg.common.wifi_channel or ""
+wifi_channel:value("36", "36 (5GHz)")
+wifi_channel:value("40", "40 (5GHz)")
+wifi_channel:value("44", "44 (5GHz)")
+wifi_channel:value("48", "48 (5GHz)")
+wifi_channel:value("149", "149 (5GHz)")
+wifi_channel:value("153", "153 (5GHz)")
+wifi_channel:value("157", "157 (5GHz)")
+wifi_channel:value("161", "161 (5GHz)")
+wifi_channel:value("165", "165 (5GHz)")
 
-local wifi_region = m:field(Value, "wifi_region", "WiFi Region")
+local wifi_region = m:field(ListValue, "wifi_region", "WiFi Region")
 wifi_region.default = m.cfg.common and m.cfg.common.wifi_region or ""
+
+local function load_wifi_regions()
+    local regions = {}
+    local fd = io.open("/usr/share/wfb-ng/wifi_regions")
+    if fd then
+        for line in fd:lines() do
+            line = trim(line)
+            if line ~= "" and line:sub(1,1) ~= "#" then
+                regions[#regions+1] = line
+            end
+        end
+        fd:close()
+    end
+    if #regions == 0 then
+        regions = {"US", "EU", "JP", "CN", "BO"}
+    end
+    return regions
+end
+
+for _, r in ipairs(load_wifi_regions()) do
+    wifi_region:value(r, r)
+end
+
 
 local gs_mavlink_peer = m:field(Value, "gs_mavlink_peer", "GS Mavlink Peer")
 gs_mavlink_peer.default = m.cfg.gs_mavlink and m.cfg.gs_mavlink.peer or ""
